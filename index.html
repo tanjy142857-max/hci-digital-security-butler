@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Digital Security Butler — clickable prototype</title>
+<style>
+  :root{
+    --navy:#003366; --navy-2:#0d4884; --teal:#0088A8; --teal-l:#e6f4f8;
+    --ok:#22a06b; --ok-l:#e2f4ec; --warn:#f2a104; --warn-l:#fef4e0;
+    --danger:#d32f2f; --danger-l:#fce8ea; --bg:#f4f7fa; --surface:#fff;
+    --ink:#1a2029; --ink2:#5a6b7b; --line:#e2e9f0;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:#dde5ee;font-family:"Segoe UI",system-ui,-apple-system,sans-serif;color:var(--ink);
+       display:flex;flex-direction:column;align-items:center;padding:28px 16px 40px;min-height:100vh}
+  h1{font-size:17px;font-weight:700;color:var(--navy);margin:0 0 4px;letter-spacing:.2px}
+  .sub{font-size:12.5px;color:#5a6b7b;margin:0 0 18px;text-align:center;max-width:560px;line-height:1.5}
+  .stage{position:relative;width:390px;height:844px;border-radius:44px;background:#0b1620;
+         padding:10px;box-shadow:0 26px 60px rgba(10,30,50,.35),0 2px 0 rgba(255,255,255,.4) inset}
+  .app{position:relative;width:100%;height:100%;border-radius:36px;overflow:hidden;background:var(--bg)}
+  .screen{position:absolute;inset:0;display:none;flex-direction:column;background:var(--bg);overflow:hidden}
+  .screen.on{display:flex;animation:fade .22s ease-out}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 20px 24px;scrollbar-width:none}
+  .scroll::-webkit-scrollbar{display:none}
+  .status{height:46px;display:flex;align-items:center;justify-content:space-between;
+          padding:0 24px;font-size:15px;font-weight:600;flex:0 0 auto}
+  .status .right{display:flex;gap:5px;align-items:center;font-size:12px}
+  .bar{display:inline-block;background:currentColor;border-radius:1px}
+  .hdr{padding:6px 20px 14px;flex:0 0 auto;background:var(--surface)}
+  .hdr.dark{background:var(--navy);color:#fff}
+  .hdr .row{display:flex;align-items:center;gap:10px}
+  .back{font-size:22px;line-height:1;cursor:pointer;color:inherit;opacity:.85;padding:2px 6px 6px 0}
+  .hdr h2{font-size:21px;margin:0;font-weight:700}
+  .hdr p{margin:4px 0 0;font-size:12.5px;color:var(--ink2)}
+  .hdr.dark p{color:#b8cee2}
+  .tab{flex:0 0 auto;display:flex;background:var(--surface);border-top:1px solid var(--line);
+       padding:8px 0 18px;position:relative}
+  .tab div{flex:1;text-align:center;font-size:11px;color:#96a2ae;cursor:pointer;padding-top:2px}
+  .tab div .ic{display:block;font-size:17px;line-height:1.5;opacity:.55}
+  .tab div.active{color:var(--navy);font-weight:600}
+  .tab div.active .ic{opacity:1}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px;
+        cursor:default;transition:transform .12s,box-shadow .12s}
+  .card.tap{cursor:pointer}
+  .card.tap:active{transform:scale(.985)}
+  .btn{display:block;width:100%;border:0;border-radius:16px;padding:16px;font-size:15px;font-weight:700;
+       color:#fff;background:var(--navy);cursor:pointer;font-family:inherit}
+  .btn:active{filter:brightness(.94)}
+  .btn.teal{background:var(--teal)} .btn.danger{background:var(--danger)} .btn.ok{background:var(--ok)}
+  .btn.ghost{background:var(--surface);color:var(--ink);border:1.5px solid var(--line)}
+  .btn.sm{padding:11px 18px;font-size:13px;width:auto;display:inline-block}
+  .row{display:flex;align-items:center;gap:12px}
+  .muted{color:var(--ink2);font-size:12.5px;line-height:1.5}
+  .chip{display:inline-block;font-size:11px;font-weight:700;padding:4px 9px;border-radius:8px}
+  .chip.d{background:var(--danger-l);color:var(--danger)} .chip.w{background:var(--warn-l);color:#b07000}
+  .chip.o{background:var(--ok-l);color:var(--ok)} .chip.n{background:#eef2f6;color:var(--ink2)}
+  .tile{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;cursor:pointer}
+  .tile:active{transform:scale(.985)}
+  .tile .ic{width:34px;height:34px;border-radius:11px;display:flex;align-items:center;justify-content:center;
+            color:#fff;font-size:16px;margin-bottom:10px}
+  .tile b{display:block;font-size:13.5px;margin-bottom:3px}
+  .tile span{font-size:11.5px;color:var(--ink2)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .hero{background:var(--navy);color:#fff;padding:0 20px 26px;flex:0 0 auto}
+  .ring{width:132px;height:132px;position:relative;flex:0 0 auto}
+  .ring svg{transform:rotate(-90deg)}
+  .ring .val{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ring .val b{font-size:34px;line-height:1} .ring .val span{font-size:10.5px;color:#b8cee2}
+  .switch{width:46px;height:26px;border-radius:13px;background:#dee6ec;position:relative;cursor:pointer;flex:0 0 auto}
+  .switch i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;
+            transition:left .18s}
+  .switch.on{background:var(--navy)} .switch.on i{left:23px}
+  .rowline{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 0;border-bottom:1px solid var(--line)}
+  .rowline:last-child{border-bottom:0}
+  .avatar{width:44px;height:44px;border-radius:14px;color:#fff;font-weight:700;display:flex;align-items:center;
+          justify-content:center;font-size:16px;flex:0 0 auto}
+  .toast{position:absolute;left:16px;right:16px;bottom:96px;background:#0f2f22;color:#dff6ea;border-radius:14px;
+         padding:14px;font-size:13px;display:none;z-index:9;box-shadow:0 12px 24px rgba(0,0,0,.25)}
+  .toast.on{display:block;animation:fade .2s}
+  .pill{font-size:11px;padding:3px 9px;border-radius:20px;background:#eef2f6;color:var(--ink2);font-weight:600}
+  .dots{display:flex;gap:8px;justify-content:center;margin:14px 0}
+  .dots i{width:8px;height:8px;border-radius:50%;background:#d6dee6;display:block}
+  .dots i.on{background:var(--navy)}
+  .splash{background:var(--navy);color:#fff;align-items:center;justify-content:center;text-align:center;
+          padding:40px 30px}
+  .splash .mark{width:150px;height:150px;border-radius:50%;border:4px solid rgba(0,136,168,.55);
+                display:flex;align-items:center;justify-content:center;margin-bottom:34px}
+  .splash h1{font-size:31px;color:#fff;margin:0} .splash h1 em{color:#4fc3dd;font-style:normal}
+  .splash p{color:#a6c1d8;font-size:13px;margin:14px 0 0;line-height:1.6}
+  .hintbar{margin-top:16px;font-size:12px;color:#5a6b7b;display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+  .hintbar b{color:var(--navy)}
+  .kbd{background:#fff;border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:11px}
+</style>
+</head>
+<body>
+<h1>Digital Security Butler — clickable prototype</h1>
+<p class="sub">12 screens · 20 interactive paths · tap the phone. Simple Mode is on by default; switch to Expert Mode in Settings to see the same screens with full detail.</p>
+
+<div class="stage">
+  <div class="app" id="app">
+
+    <!-- 1 SPLASH -->
+    <section class="screen splash on" id="s1">
+      <div class="mark">
+        <svg width="76" height="76" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6">
+          <path d="M12 2.5 20 6v6.2c0 5-3.4 8.3-8 9.8-4.6-1.5-8-4.8-8-9.8V6l8-3.5Z"/>
+          <path d="m8.6 12.2 2.3 2.3 4.6-4.6" stroke="#4fc3dd" stroke-width="2"/>
+        </svg>
+      </div>
+      <h1>Digital Security<br><em>Butler</em></h1>
+      <p>Your household's security,<br>in one calm place</p>
+      <div style="position:absolute;bottom:52px;left:0;right:0;text-align:center">
+        <div class="dots"><i class="on"></i><i></i><i></i></div>
+        <div style="font-size:11px;color:#7e9fbb;margin-top:26px">Tap anywhere to continue · v1.0</div>
+      </div>
+    </section>
+
+    <!-- 2 ONBOARDING 1 -->
+    <section class="screen" id="s2" onclick="go('s3')">
+      <div class="status"><span>9:41</span><span class="right">▮▮▮ ⌁ ▭</span></div>
+      <div class="scroll">
+        <h2 style="font-size:27px;line-height:1.15;color:var(--navy);margin:26px 0 6px">Five things,<br><span style="color:var(--teal)">one app</span></h2>
+        <p class="muted" style="margin:0 0 20px">Everything you need to stay safe, without learning a new hobby.</p>
+        <div class="card" style="display:flex;gap:12px;align-items:center"><div class="avatar" style="background:var(--navy)">🔒</div><div><b>Password Vault</b><div class="muted">Keep every password safe</div></div></div>
+        <div class="card" style="display:flex;gap:12px;align-items:center"><div class="avatar" style="background:var(--danger)">⚠</div><div><b>Breach Monitor</b><div class="muted">We watch your email for leaks</div></div></div>
+        <div class="card" style="display:flex;gap:12px;align-items:center"><div class="avatar" style="background:var(--teal)">◈</div><div><b>Device Security</b><div class="muted">Scan phones and laptops</div></div></div>
+        <div class="card" style="display:flex;gap:12px;align-items:center"><div class="avatar" style="background:var(--ok)">◎</div><div><b>Privacy Scanner</b><div class="muted">See what apps can access</div></div></div>
+        <div class="card" style="display:flex;gap:12px;align-items:center"><div class="avatar" style="background:var(--warn)">⚑</div><div><b>Phishing Drill</b><div class="muted">Practise spotting scams</div></div></div>
+        <div class="dots"><i class="on"></i><i></i><i></i></div>
+        <button class="btn" onclick="event.stopPropagation();go('s3')">Continue</button>
+      </div>
+    </section>
+
+    <!-- 3 ONBOARDING 2 -->
+    <section class="screen" id="s3">
+      <div class="status"><span>9:41</span><span class="right">▮▮▮ ⌁ ▭</span></div>
+      <div class="scroll">
+        <h2 style="font-size:27px;line-height:1.15;color:var(--navy);margin:26px 0 6px">How much detail<br>do you want?</h2>
+        <p class="muted" style="margin:0 0 18px">You can change this any time in Settings.</p>
+        <div class="card" id="mSimple" style="border:2px solid var(--teal);background:#f0fafc;cursor:pointer" onclick="pickMode('simple')">
+          <div class="row" style="justify-content:space-between"><div><b style="font-size:17px">Simple Mode</b><div style="font-size:12px;font-weight:700;color:var(--teal)">Recommended</div></div><div id="mSimpleTick" style="width:24px;height:24px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px">✓</div></div>
+          <div class="muted" style="margin-top:10px">• One recommended action per alert<br>• Plain language, no jargon<br>• Bigger buttons, fewer choices</div>
+        </div>
+        <div class="card" id="mExpert" style="cursor:pointer" onclick="pickMode('expert')">
+          <div class="row" style="justify-content:space-between"><div><b style="font-size:17px">Expert Mode</b><div class="muted">For confident users</div></div><div id="mExpertTick" style="width:24px;height:24px;border-radius:50%;border:2px solid var(--ink2)"></div></div>
+          <div class="muted" style="margin-top:10px">• Full alert detail and raw data<br>• Per-item controls and history</div>
+        </div>
+        <div class="card" style="background:#e9eff6;border:0"><b style="font-size:13px">Not sure? Pick Simple Mode.</b><div class="muted">We switch you to Expert Mode when you ask for detail.</div></div>
+        <div class="dots"><i></i><i class="on"></i><i></i></div>
+        <button class="btn" onclick="go('s4')">Continue</button>
+      </div>
+    </section>
+
+    <!-- 4 ONBOARDING 3 -->
+    <section class="screen" id="s4">
+      <div class="status"><span>9:41</span><span class="right">▮▮▮ ⌁ ▭</span></div>
+      <div class="scroll">
+        <h2 style="font-size:27px;color:var(--navy);margin:26px 0 6px">Create your account</h2>
+        <p class="muted" style="margin:0 0 18px">Everything is encrypted before it leaves your phone.</p>
+        <label class="muted" style="font-weight:700">Name</label>
+        <div class="card" style="margin:6px 0 14px">Siti Rahmat</div>
+        <label class="muted" style="font-weight:700">Email</label>
+        <div class="card" style="margin:6px 0 14px">siti.rahmat@gmail.com</div>
+        <label class="muted" style="font-weight:700">Password</label>
+        <div class="card" style="margin:6px 0 14px">••••••••••••</div>
+        <div class="card" style="background:var(--ok-l);border:0">
+          <b style="color:var(--ok);font-size:14px">Add your family now?</b>
+          <div class="muted" style="margin:6px 0 12px">A guardian view shows each member's safety score. You can invite them later from the Family tab.</div>
+          <div style="display:flex;gap:10px">
+            <button class="btn ok sm" style="flex:1" onclick="go('s11')">Invite now</button>
+            <button class="btn ghost sm" style="flex:1" onclick="go('s5')">Later</button>
+          </div>
+        </div>
+        <div class="dots"><i></i><i></i><i class="on"></i></div>
+        <button class="btn" onclick="go('s5')">Create account</button>
+      </div>
+    </section>
+
+    <!-- 5 HOME -->
+    <section class="screen" id="s5">
+      <div class="hero">
+        <div class="status" style="color:#fff;padding-left:0;padding-right:0"><span>9:41</span><span class="right">▮▮▮ ⌁ ▭</span></div>
+        <div style="font-size:12.5px;color:#b8cee2">Good morning, Siti</div>
+        <div style="font-size:19px;font-weight:700;margin:5px 0 18px">One thing needs you today</div>
+        <div class="row" style="gap:18px">
+          <div class="ring">
+            <svg width="132" height="132">
+              <circle cx="66" cy="66" r="56" stroke="#0d4884" stroke-width="13" fill="none"/>
+              <circle id="ringArc" cx="66" cy="66" r="56" stroke="#0088A8" stroke-width="13" fill="none"
+                      stroke-linecap="round" stroke-dasharray="352" stroke-dashoffset="63"/>
+            </svg>
+            <div class="val"><b id="score">82</b><span>Safety score</span></div>
+          </div>
+          <div>
+            <div style="font-size:17px;font-weight:700" id="verdict">Good, not great</div>
+            <div style="font-size:12.5px;color:#b8cee2;line-height:1.5;margin:6px 0 12px" id="verdictSub">1 alert is waiting and 2 apps can read your messages.</div>
+            <button class="btn teal" style="width:auto;padding:11px 18px;font-size:13.5px" onclick="go('s7')">Fix it now</button>
+          </div>
+        </div>
+      </div>
+      <div class="scroll" style="padding-top:0">
+        <div class="card tap" style="margin-top:-14px;display:flex;gap:12px;align-items:center" onclick="go('s7')">
+          <div class="avatar" style="background:var(--danger)">⚠</div>
+          <div style="flex:1"><b style="font-size:13.5px">Your email appeared in a leak</b>
+            <div class="muted">LinkedIn · 2 days ago · 1 password to change</div></div>
+          <div style="color:var(--ink2);font-size:20px">›</div>
+        </div>
+        <div class="muted" style="font-weight:700;margin:6px 0 10px">Your five areas</div>
+        <div class="grid">
+          <div class="tile" onclick="go('s6')"><div class="ic" style="background:var(--navy)">🔒</div><b>Password Vault</b><span>48 saved · 3 to act on</span></div>
+          <div class="tile" onclick="go('s7')"><div class="ic" style="background:var(--danger)">⚠</div><b>Breach Monitor</b><span id="tileAlert" style="color:var(--danger)">1 open alert</span></div>
+          <div class="tile" onclick="go('s8')"><div class="ic" style="background:var(--teal)">◈</div><b>Device Security</b><span>Scanned 2h ago</span></div>
+          <div class="tile" onclick="go('s9')"><div class="ic" style="background:var(--ok)">◎</div><b>Privacy Scanner</b><span>4 apps over-sharing</span></div>
+          <div class="tile" onclick="go('s10')"><div class="ic" style="background:var(--warn)">⚑</div><b>Phishing Drill</b><span>Drill due today</span></div>
+        </div>
+        <div class="tile" style="margin-top:12px" onclick="go('s11')"><div class="ic" style="background:var(--ok)">❖</div><b>Family Dashboard</b><span>3 members · all joined</span></div>
+      </div>
+      <div class="tab" data-active="home"></div>
+    </section>
+
+    <!-- 6 VAULT -->
+    <section class="screen" id="s6">
+      <div class="hdr"><div class="row"><span class="back" onclick="go('s5')">‹</span><div><h2>Password Vault</h2><p>48 passwords · 3 to act on</p></div></div></div>
+      <div class="scroll">
+        <div class="card" style="display:flex;justify-content:space-between;align-items:center">Search passwords <span style="color:var(--ink2)">◎</span></div>
+        <div style="display:flex;gap:8px;margin:0 0 14px"><span class="chip d">Act now 3</span><span class="chip w">Watch 5</span><span class="chip n">All 48</span></div>
+        <div class="card tap" id="vaultGmail" onclick="openEntry()" style="display:flex;gap:12px;align-items:center">
+          <div class="avatar" style="background:#e44a4a">G</div>
+          <div style="flex:1"><b>Gmail</b><div class="muted">siti.rahmat@gmail.com</div></div>
+          <span class="chip d" id="gmailChip">Act now</span>
+        </div>
+        <div class="card" style="display:flex;gap:12px;align-items:center"><div class="avatar" style="background:#f2a104">M</div><div style="flex:1"><b>Maybank</b><div class="muted">siti.r</div></div><span class="chip w">Watch</span></div>
+        <div class="card" style="display:flex;gap:12px;align-items:center"><div class="avatar" style="background:#282828">N</div><div style="flex:1"><b>Netflix</b><div class="muted">family plan</div></div><span class="chip o">Fine</span></div>
+        <div class="card" style="display:flex;gap:12px;align-items:center"><div class="avatar" style="background:#ee4d2d">S</div><div style="flex:1"><b>Shopee</b><div class="muted">siti.rahmat</div></div><span class="chip o">Fine</span></div>
+        <div class="card" style="display:flex;gap:12px;align-items:center"><div class="avatar" style="background:#d32f3f">A</div><div style="flex:1"><b>AirAsia</b><div class="muted">siti.r</div></div><span class="chip w">Watch</span></div>
+        <div class="card" style="display:flex;gap:12px;align-items:center"><div class="avatar" style="background:#4285f4">G</div><div style="flex:1"><b>Google Drive</b><div class="muted">siti.rahmat</div></div><span class="chip o">Fine</span></div>
+        <div id="entryPanel" style="display:none">
+          <div class="card" style="border:2px solid var(--teal)">
+            <b style="font-size:14px">Gmail — change this password</b>
+            <div class="muted" style="margin:6px 0 12px">This is the password that appeared in the LinkedIn leak, and you also use it on Shopee.</div>
+            <div style="background:var(--bg);border-radius:12px;padding:12px;font-family:ui-monospace,Consolas,monospace;font-size:14px;letter-spacing:1px" id="newPass">tR7#vQm2$Lp9wK</div>
+            <div style="display:flex;gap:10px;margin-top:12px">
+              <button class="btn teal sm" style="flex:1" onclick="regen()">Generate another</button>
+              <button class="btn ok sm" style="flex:1" onclick="saveEntry()">Save to vault</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="tab" data-active="vault"></div>
+    </section>
+
+    <!-- 7 BREACH -->
+    <section class="screen" id="s7">
+      <div class="hdr dark"><div class="row"><span class="back" onclick="go('s5')">‹</span><div><h2>Breach Monitor</h2><p>Watching 1 mailbox</p></div></div></div>
+      <div class="scroll">
+        <div class="card" style="background:var(--navy-2);border:0;color:#fff;margin-top:8px">
+          <b>siti.rahmat@gmail.com</b>
+          <div style="font-size:12px;color:#b8cee2;margin-top:5px">Last checked 4 hours ago · 3 breaches found</div>
+        </div>
+        <div class="card" id="breachCard" style="border:2px solid var(--danger);background:#fffafa">
+          <span class="chip d" id="breachChip">Act now</span>
+          <b style="display:block;font-size:17px;margin:10px 0 4px">LinkedIn</b>
+          <div class="muted">Leaked 11 Jun 2026 · email + password</div>
+          <div style="font-size:13px;line-height:1.6;margin:12px 0">
+            Anyone with this list can try your password on other sites.
+            You reused it on <b>2 accounts</b>.
+          </div>
+          <button class="btn danger" id="breachBtn" onclick="go('s6');setTimeout(openEntry,260)">Fix it now</button>
+          <div style="border-top:1px solid #f0d6d6;margin-top:14px;padding-top:12px;cursor:pointer" onclick="flipHelp(this)">
+            <div style="display:flex;align-items:center;gap:9px;color:var(--teal);font-weight:700;font-size:13px">
+              <span style="width:21px;height:21px;border:2px solid var(--teal);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px">?</span>
+              What does this mean?<span class="caret" style="margin-left:auto;font-size:12px">▾</span>
+            </div>
+            <div class="helpBody" style="display:none;font-size:12.5px;color:var(--ink2);line-height:1.6;margin-top:9px">
+              A breach list is a stolen database. If your password appears in one, someone may already be trying it.
+            </div>
+          </div>
+        </div>
+        <div class="muted" style="font-weight:700;margin:6px 0 8px">Earlier</div>
+        <div class="card" style="display:flex;justify-content:space-between;align-items:center"><div><b>Canva</b><div class="muted">Leaked 3 Mar 2026 · email only</div></div><span class="chip o">Fine</span></div>
+        <div class="card" style="display:flex;justify-content:space-between;align-items:center"><div><b>Shopee</b><div class="muted">Leaked 8 Nov 2025 · phone number</div></div><span class="chip w">Watch</span></div>
+      </div>
+      <div class="tab" data-active="alert"></div>
+    </section>
+
+    <!-- 8 DEVICE -->
+    <section class="screen" id="s8">
+      <div class="hdr"><div class="row"><span class="back" onclick="go('s5')">‹</span><div><h2>Device Security</h2><p>2 devices on this account</p></div></div></div>
+      <div class="scroll">
+        <div class="card" id="scanCard">
+          <div class="row" style="gap:16px">
+            <div class="ring" style="width:96px;height:96px">
+              <svg width="96" height="96"><circle cx="48" cy="48" r="39" stroke="#e2ecf2" stroke-width="8" fill="none"/>
+                <circle id="scanArc" cx="48" cy="48" r="39" stroke="#22a06b" stroke-width="8" fill="none"
+                        stroke-linecap="round" stroke-dasharray="245" stroke-dashoffset="0"/></svg>
+              <div class="val"><b style="font-size:20px" id="scanIcon">✓</b></div>
+            </div>
+            <div><b style="font-size:17px" id="scanTitle">Scan complete</b>
+              <div style="color:var(--ok);font-weight:700;font-size:13px" id="scanSub">No malware found</div>
+              <div class="muted" id="scanNote">2 settings can still be tightened.</div></div>
+          </div>
+          <div class="muted" style="margin-top:12px">Siti's iPhone 13 · <span id="scanWhen">scanned 3 min ago</span></div>
+          <button class="btn ghost sm" style="margin-top:12px" onclick="runScan()" id="scanBtn">Scan again</button>
+        </div>
+        <div class="muted" style="font-weight:700;margin:6px 0 8px">Findings</div>
+        <div class="card tap" onclick="toast('Screen lock changed to 6 digits.')"><div class="row" style="justify-content:space-between"><span class="chip d">High</span><span style="color:var(--ink2)">›</span></div><b style="display:block;margin:8px 0 3px">Screen lock is 4 digits</b><div class="muted">Change to 6 digits</div></div>
+        <div class="card tap" onclick="toast('Reminder set for tonight, 22:00.')"><div class="row" style="justify-content:space-between"><span class="chip w">Medium</span><span style="color:var(--ink2)">›</span></div><b style="display:block;margin:8px 0 3px">iOS update available</b><div class="muted">Update tonight</div></div>
+        <div class="card"><div class="row" style="justify-content:space-between"><span class="chip n">Low</span></div><b style="display:block;margin:8px 0 3px">Old laptop not scanned</b><div class="muted">Scan from the app</div></div>
+      </div>
+      <div class="tab" data-active="home"></div>
+    </section>
+
+    <!-- 9 PRIVACY -->
+    <section class="screen" id="s9">
+      <div class="hdr"><div class="row"><span class="back" onclick="go('s5')">‹</span><div><h2>Privacy Scanner</h2><p>Which apps can see what</p></div></div></div>
+      <div class="scroll">
+        <div class="card">
+          <div class="row" style="gap:16px">
+            <div class="ring" style="width:96px;height:96px">
+              <svg width="96" height="96"><circle cx="48" cy="48" r="39" stroke="#e2ecf2" stroke-width="8" fill="none"/>
+                <circle cx="48" cy="48" r="39" stroke="#f2a104" stroke-width="8" fill="none" stroke-linecap="round"
+                        stroke-dasharray="245" stroke-dashoffset="137"/></svg>
+              <div class="val"><b style="font-size:19px">44%</b></div>
+            </div>
+            <div><div style="font-size:13px;line-height:1.5">of permissions are more than these apps need.</div>
+              <div style="color:#b07000;font-weight:700;font-size:12.5px;margin-top:6px">4 apps over-sharing</div></div>
+          </div>
+        </div>
+        <div class="card" style="display:flex;gap:12px;align-items:center"><div class="avatar" style="background:var(--danger)">C</div><div style="flex:1"><b>ChatMate</b><div class="muted">Microphone · always on</div></div><div class="switch on" onclick="flip(this)"><i></i></div></div>
+        <div class="card" style="display:flex;gap:12px;align-items:center"><div class="avatar" style="background:var(--danger)">P</div><div style="flex:1"><b>PhotoFun</b><div class="muted">All photos · including albums</div></div><div class="switch on" onclick="flip(this)"><i></i></div></div>
+        <div class="card" style="display:flex;gap:12px;align-items:center"><div class="avatar" style="background:var(--warn)">F</div><div style="flex:1"><b>FitTrack</b><div class="muted">Location · background</div></div><div class="switch on" onclick="flip(this)"><i></i></div></div>
+        <div class="card" style="display:flex;gap:12px;align-items:center"><div class="avatar" style="background:var(--warn)">S</div><div style="flex:1"><b>ShopEasy</b><div class="muted">Contacts</div></div><div class="switch" onclick="flip(this)"><i></i></div></div>
+        <div class="card" style="display:flex;gap:12px;align-items:center"><div class="avatar" style="background:var(--ok)">N</div><div style="flex:1"><b>NotesPro</b><div class="muted">Calendar</div></div><div class="switch" onclick="flip(this)"><i></i></div></div>
+      </div>
+      <div class="tab" data-active="home"></div>
+    </section>
+
+    <!-- 10 PHISHING DRILL -->
+    <section class="screen" id="s10">
+      <div class="hero" style="padding-bottom:20px">
+        <div class="status" style="color:#fff;padding-left:0;padding-right:0"><span>9:41</span><span class="right">▮▮▮ ⌁ ▭</span></div>
+        <div class="row" style="justify-content:space-between"><b style="font-size:20px">Phishing Drill</b><span class="back" onclick="go('s5')" style="color:#fff">‹</span></div>
+        <div style="font-size:12.5px;color:#b8cee2;margin:4px 0 10px">Question 2 of 5</div>
+        <div style="height:8px;border-radius:5px;background:#0d4884"><div style="width:40%;height:8px;border-radius:5px;background:var(--teal)"></div></div>
+      </div>
+      <div class="scroll" style="padding-top:14px">
+        <div class="card">
+          <div class="muted" style="font-weight:700">Is this message safe?</div>
+          <div style="background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:10px;font-size:12.5px;line-height:1.75">
+            <b>From: Maybank Alert</b><br>
+            <span style="color:var(--danger)">maybank-secure-login.my.id</span><br><br>
+            Dear customer,<br>Your account will be suspended in 24 hours. Verify now:<br>
+            <span style="color:var(--teal)">maybank-secure-login.my.id/verify</span><br><br>
+            Act now to avoid losing access.<br>
+            <span class="muted">Maybank Security Team</span>
+          </div>
+        </div>
+        <div class="card tap" style="border:1.5px solid var(--ok)" onclick="answer(true)"><b>Report as phishing</b></div>
+        <div class="card tap" onclick="answer(false)"><b>Ignore and delete</b></div>
+        <div class="card tap" style="border:1.5px solid var(--danger)" onclick="answer(false)"><b>Enter my details</b></div>
+        <p class="muted" style="text-align:center">Tap an answer to continue</p>
+      </div>
+      <div class="tab" data-active="home"></div>
+    </section>
+
+    <!-- 11 FAMILY -->
+    <section class="screen" id="s11">
+      <div class="hdr dark"><div class="row"><span class="back" onclick="go('s5')">‹</span><div><h2>Family Dashboard</h2><p>3 members · 1 needs attention</p></div></div></div>
+      <div class="scroll">
+        <div class="card" style="display:flex;gap:12px;align-items:center;margin-top:8px">
+          <div class="avatar" style="background:var(--teal);width:52px;height:52px;font-size:18px">SR</div>
+          <div style="flex:1"><b>Siti (you)</b><div class="muted">Guardian</div><span class="chip" style="background:var(--teal-l);color:var(--teal);margin-top:6px">1 alert open</span></div>
+          <div style="text-align:right"><b style="font-size:26px;color:var(--teal)">82</b><div class="muted">score</div></div>
+        </div>
+        <div class="card" style="display:flex;gap:12px;align-items:center">
+          <div class="avatar" style="background:var(--warn);width:52px;height:52px;font-size:18px">AH</div>
+          <div style="flex:1"><b>Amir</b><div class="muted">Teen · 16</div><span class="chip w" style="margin-top:6px">2 weak passwords</span></div>
+          <div style="text-align:right"><b style="font-size:26px;color:var(--warn)">64</b><div class="muted">score</div></div>
+        </div>
+        <div class="card" style="display:flex;gap:12px;align-items:center">
+          <div class="avatar" style="background:var(--ok);width:52px;height:52px;font-size:18px">RK</div>
+          <div style="flex:1"><b>Razak</b><div class="muted">Father · 68</div><span class="chip o" style="margin-top:6px">All good</span></div>
+          <div style="text-align:right"><b style="font-size:26px;color:var(--ok)">91</b><div class="muted">score</div></div>
+        </div>
+        <div class="card" style="background:#e9eff6;border:0">
+          <b style="color:var(--navy)">Invite someone</b>
+          <div class="muted" style="margin:5px 0 12px">Send a one-time code by WhatsApp or email.</div>
+          <button class="btn sm" onclick="toast('One-time code K7T-4QP sent to Razak by WhatsApp.')">Send invite</button>
+        </div>
+        <p class="muted">Amir's details are limited to alerts — he turned on private mode for browsing history.</p>
+      </div>
+      <div class="tab" data-active="family"></div>
+    </section>
+
+    <!-- 12 SETTINGS -->
+    <section class="screen" id="s12">
+      <div class="hdr"><div class="row"><span class="back" onclick="go('s5')">‹</span><div><h2>Profile &amp; Settings</h2></div></div></div>
+      <div class="scroll">
+        <div class="card" style="display:flex;gap:14px;align-items:center;margin-top:8px">
+          <div class="avatar" style="background:var(--teal);width:54px;height:54px;font-size:19px">SR</div>
+          <div><b>Siti Rahmat</b><div class="muted">siti.rahmat@gmail.com</div>
+            <div style="color:var(--teal);font-weight:700;font-size:12px;margin-top:3px" id="modeLabel">Guardian · Simple Mode</div></div>
+        </div>
+        <div class="muted" style="font-weight:700;margin:6px 0 8px">Appearance</div>
+        <div class="card">
+          <div class="rowline" style="border:0"><b>Mode</b>
+            <div class="row" style="gap:6px">
+              <button class="btn sm" id="btnSimple" onclick="setMode('simple')" style="background:var(--navy)">Simple</button>
+              <button class="btn sm ghost" id="btnExpert" onclick="setMode('expert')">Expert</button>
+            </div>
+          </div>
+        </div>
+        <div class="muted" style="font-weight:700;margin:6px 0 8px">Notifications</div>
+        <div class="card">
+          <div class="rowline"><div><b>Breach alerts</b><div class="muted">Always on</div></div><div class="switch on" onclick="flip(this)"><i></i></div></div>
+          <div class="rowline"><div><b>Weekly safety report</b><div class="muted">Monday 8am</div></div><div class="switch on" onclick="flip(this)"><i></i></div></div>
+          <div class="rowline"><div><b>Phishing drill reminders</b><div class="muted">Off</div></div><div class="switch" onclick="flip(this)"><i></i></div></div>
+        </div>
+        <div class="muted" style="font-weight:700;margin:6px 0 8px">Privacy</div>
+        <div class="card">
+          <div class="rowline"><b>Data sharing with family</b><span class="muted">Only alerts</span></div>
+          <div class="rowline"><b>Export my data</b><span class="muted">PDPA request</span></div>
+          <div class="rowline" style="border:0" onclick="toast('Deletion needs a typed confirmation.')"><b style="color:var(--danger)">Delete account</b><span class="muted">›</span></div>
+        </div>
+        <button class="btn ghost" style="color:var(--danger);border-color:var(--danger);margin-top:8px" onclick="go('s1')">Sign out</button>
+      </div>
+      <div class="tab" data-active="me"></div>
+    </section>
+
+    <div class="toast" id="toast"></div>
+  </div>
+</div>
+
+<div class="hintbar">
+  <span><b>Try:</b> Home → alert → Fix it now → Vault → Save to vault</span>
+  <span><b>Or:</b> Settings → Expert Mode</span>
+  <span class="kbd" onclick="resetDemo()">reset demo</span>
+</div>
+
+<script>
+const screens = [...document.querySelectorAll('.screen')];
+const TABMAP = {home:'s5', vault:'s6', alert:'s7', family:'s11', me:'s12'};
+let state = {mode:'simple', fixed:false};
+
+function go(id){
+  screens.forEach(s => s.classList.toggle('on', s.id === id));
+  const cur = document.getElementById(id);
+  const sc = cur.querySelector('.scroll'); if (sc) sc.scrollTop = 0;
+  document.querySelectorAll('.tab').forEach(tab => {
+    const active = tab.dataset.active;
+    tab.innerHTML = ['home','vault','alert','family','me'].map(k => {
+      const label = {home:'Home',vault:'Vault',alert:'Alerts',family:'Family',me:'Me'}[k];
+      const ic = {home:'⌂',vault:'◎',alert:'△',family:'❖',me:'◔'}[k];
+      return `<div class="${k===active?'active':''}" onclick="go('${TABMAP[k]}')"><span class="ic">${ic}</span>${label}</div>`;
+    }).join('');
+  });
+  if (id === 's5') applyState();
+}
+function pickMode(m){
+  state.mode = m;
+  const s = document.getElementById('mSimple'), e = document.getElementById('mExpert');
+  s.style.border = m==='simple' ? '2px solid var(--teal)' : '1px solid var(--line)';
+  s.style.background = m==='simple' ? '#f0fafc' : '#fff';
+  e.style.border = m==='expert' ? '2px solid var(--navy)' : '1px solid var(--line)';
+  document.getElementById('mSimpleTick').style.background = m==='simple' ? 'var(--teal)' : 'transparent';
+  document.getElementById('mExpertTick').style.background = m==='expert' ? 'var(--navy)' : 'transparent';
+  document.getElementById('mSimpleTick').textContent = m==='simple' ? '✓' : '';
+  document.getElementById('mExpertTick').textContent = m==='expert' ? '✓' : '';
+  document.getElementById('mExpertTick').style.color = '#fff';
+  document.getElementById('mExpertTick').style.border = '2px solid var(--ink2)';
+}
+function setMode(m){
+  state.mode = m;
+  document.getElementById('modeLabel').textContent = 'Guardian · ' + (m==='simple'?'Simple Mode':'Expert Mode');
+  document.getElementById('btnSimple').style.background = m==='simple' ? 'var(--navy)' : '#fff';
+  document.getElementById('btnSimple').style.color = m==='simple' ? '#fff' : 'var(--ink)';
+  document.getElementById('btnSimple').className = m==='simple' ? 'btn sm' : 'btn sm ghost';
+  document.getElementById('btnExpert').style.background = m==='expert' ? 'var(--navy)' : '#fff';
+  document.getElementById('btnExpert').style.color = m==='expert' ? '#fff' : 'var(--ink)';
+  document.getElementById('btnExpert').className = m==='expert' ? 'btn sm' : 'btn sm ghost';
+  toast(m==='simple' ? 'Simple Mode: one recommended action per alert.' : 'Expert Mode: full leak detail and per-item controls.');
+}
+function flip(el){ el.classList.toggle('on'); }
+function flipHelp(el){
+  const b = el.querySelector('.helpBody'), c = el.querySelector('.caret');
+  const open = b.style.display === 'block';
+  b.style.display = open ? 'none' : 'block';
+  c.textContent = open ? '▾' : '▴';
+}
+function openEntry(){
+  const p = document.getElementById('entryPanel');
+  p.style.display = 'block';
+  p.scrollIntoView({behavior:'smooth', block:'center'});
+}
+function regen(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789#%$?';
+  let out = '';
+  for (let i=0;i<16;i++) out += chars[Math.floor(Math.random()*chars.length)];
+  document.getElementById('newPass').textContent = out;
+}
+function saveEntry(){
+  state.fixed = true;
+  document.getElementById('gmailChip').textContent = 'Fine';
+  document.getElementById('gmailChip').className = 'chip o';
+  document.getElementById('entryPanel').style.display = 'none';
+  go('s5');
+  toast('Password changed. 2 accounts safe. Score 82 → 89.');
+}
+function applyState(){
+  if (state.fixed){
+    document.getElementById('score').textContent = '89';
+    document.getElementById('ringArc').setAttribute('stroke-dashoffset', 39);
+    document.getElementById('verdict').textContent = 'You are in good shape';
+    document.getElementById('verdictSub').textContent = 'No open alerts. 2 apps can still read your messages.';
+    document.getElementById('tileAlert').textContent = 'No open alerts';
+    document.getElementById('tileAlert').style.color = 'var(--ok)';
+    document.getElementById('breachChip').textContent = 'Fine';
+    document.getElementById('breachChip').className = 'chip o';
+    document.getElementById('breachBtn').textContent = 'See what changed';
+    const card = document.getElementById('breachCard');
+    card.style.border = '2px solid var(--ok)';
+    card.style.background = '#f6fdf9';
+  }
+}
+function runScan(){
+  const btn = document.getElementById('scanBtn');
+  btn.textContent = 'Scanning…';
+  document.getElementById('scanTitle').textContent = 'Scanning';
+  document.getElementById('scanSub').textContent = 'Checking 3 areas';
+  document.getElementById('scanSub').style.color = 'var(--ink2)';
+  document.getElementById('scanArc').setAttribute('stroke-dasharray','245');
+  document.getElementById('scanArc').setAttribute('stroke-dashoffset','245');
+  let p = 0;
+  const t = setInterval(()=>{
+    p += 8;
+    document.getElementById('scanArc').setAttribute('stroke-dashoffset', 245 - 245*p/100);
+    if (p >= 100){
+      clearInterval(t);
+      btn.textContent = 'Scan again';
+      document.getElementById('scanTitle').textContent = 'Scan complete';
+      document.getElementById('scanSub').textContent = 'No malware found';
+      document.getElementById('scanSub').style.color = 'var(--ok)';
+      document.getElementById('scanWhen').textContent = 'scanned just now';
+      toast('Scan finished: no malware, 2 settings to tighten.');
+    }
+  }, 90);
+}
+function answer(ok){
+  toast(ok ? 'Correct. The domain is the tell: maybank-secure-login.my.id is not maybank2u.com.my.'
+           : 'Not quite. The link is the tell — a lookalike domain, not the bank.');
+  setTimeout(()=>go('s5'), 1400);
+}
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('on');
+  clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('on'), 3200);
+}
+function resetDemo(){
+  state = {mode:'simple', fixed:false};
+  location.reload();
+}
+document.querySelectorAll('.hdr').forEach(h => h.insertAdjacentHTML('afterbegin',
+  '<div class="status" style="padding:0 0 2px"><span>9:41</span><span class="right">▮▮▮ ⌁ ▭</span></div>'));
+document.getElementById('s1').onclick = ()=>go('s2');
+go(location.hash && document.querySelector(location.hash) ? location.hash.slice(1) : 's1');
+</script>
+</body>
+</html>
